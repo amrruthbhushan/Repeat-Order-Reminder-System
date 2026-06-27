@@ -1,0 +1,133 @@
+// Prisma schema for Repeat Order Reminder System (Ganga Maxx Marketplace)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // Admin, Sales Admin, Salesman, Warehouse Staff, Accounts Manager, Compliance Admin
+  permissions String   // JSON string of permissions
+  users       User[]
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+  orders     Order[]  @relation("SalesmanOrders")
+  reminders  ReminderHistory[]
+  notifications Notification[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Customer {
+  id                      String   @id @default(uuid())
+  institutionName         String
+  contactPerson           String
+  phone                   String
+  email                   String
+  location                String
+  customerType            String   // Hospital, Hotel, Corporate, School, Industrial
+  contractStart           DateTime
+  contractEnd             DateTime
+  preferredReminderMethod String   @default("WhatsApp") // WhatsApp, Email, SMS
+  status                  String   @default("Active")   // Active, Inactive
+  orders                  Order[]
+  reminders               ReminderHistory[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  sku         String      @unique
+  category    String      // Disinfectants, Surface Cleaners, Hand Hygiene, Laundry, Accessories
+  price       Float
+  warehouse   String      @default("Central Hub - Delhi")
+  stock       Int
+  minStock    Int
+  safetyInfo  String?
+  isActive    Boolean     @default(true)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  salesmanId  String?
+  salesman    User?       @relation("SalesmanOrders", fields: [salesmanId], references: [id])
+  totalAmount Float
+  orderDate   DateTime    @default(now())
+  deliveryDate DateTime?
+  status      String      @default("Delivered") // Pending, Processing, Delivered, Cancelled
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model ReminderRule {
+  id             String   @id @default(uuid())
+  name           String
+  intervalType   String   // Weekly, Monthly, Custom Interval
+  intervalDays   Int      @default(30)
+  reminderBefore Int      @default(3)  // Days before due date
+  reminderAfter  Int      @default(2)  // Days after due date if unfulfilled
+  priorityLevel  String   @default("High") // High, Medium, Low
+  reminderMethod String   @default("WhatsApp") // WhatsApp, Email, SMS
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+}
+
+model ReminderHistory {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  salesmanId String?
+  salesman   User?    @relation(fields: [salesmanId], references: [id])
+  method     String   // WhatsApp, Email, SMS
+  status     String   // Sent, Pending, Responded, Failed
+  message    String
+  sentAt     DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info") // info, warning, urgent, success
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

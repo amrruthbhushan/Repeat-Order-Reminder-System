@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://repeat-order-reminder-system.onrender.com',
+  baseURL: 'https://repeat-order-reminder-system.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
